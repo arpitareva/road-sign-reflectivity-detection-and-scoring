@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+ultralytics
+opencv-python-headless
+numpy
+Pillow
+prometheus-client
+python-multipart
+pyyaml
+matplotlib

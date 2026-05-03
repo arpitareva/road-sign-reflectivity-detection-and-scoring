@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Road Sign Reflectivity Detection</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#e1e2e6;
+  --s1:#c3d0f6;--s2:#111827;--s3:#1a2235;
+  --b1:#1e2d4a;--b2:#243354;
+  --blue:#3b82f6;--indigo:#6366f1;--violet:#8b5cf6;
+  --cyan:#06b6d4;--teal:#14b8a6;
+  --green:#22c55e;--lime:#61970f;
+  --amber:#f59e0b;--orange:#f97316;
+  --red:#ef4444;--rose:#f43f5e;
+  --txt:#f7f9fb;--txt2:#6f7a8a;--txt3:#56667c;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+
+/* ── Header ── */
+.header{background:linear-gradient(135deg,#0d1b3e 0%,#0a1628 50%,#0d1b3e 100%);border-bottom:1px solid #1e3a5f;padding:0 32px}
+.header-inner{max-width:1280px;margin:0 auto;padding:20px 0;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--indigo));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-icon svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2}
+.brand-text h1{font-size:29px;font-weight:700;color:var(--txt);line-height:1.2}
+.brand-text p{font-size:16px;color:#64748b;margin-top:2px}
+.header-status{display:flex;align-items:center;gap:16px}
+.status-pill{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid}
+.status-online{background:rgba(34,197,94,0.1);color:#4ade80;border-color:rgba(34,197,94,0.25)}
+.status-model{background:rgba(59,130,246,0.1);color:#60a5fa;border-color:rgba(59,130,246,0.25)}
+.pulse{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.nav-links{display:flex;gap:6px}
+.nav-link{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:500;text-decoration:none;color:var(--txt2);border:1px solid #1e3a5f;transition:all .2s}
+.nav-link:hover{background:rgba(59,130,246,0.1);color:var(--blue);border-color:rgba(59,130,246,0.3)}
+
+/* ── Hero strip ── */
+.hero{background:linear-gradient(90deg,rgba(59,130,246,0.08),rgba(139,92,246,0.06),rgba(6,182,212,0.08));border-bottom:1px solid #1e3a5f;padding:14px 32px}
+.hero-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:32px}
+.hero-stat{text-align:center;padding:0 20px;border-right:1px solid #1e3a5f}
+.hero-stat:last-child{border-right:none}
+.hero-stat-val{font-size:22px;font-weight:700}
+.hero-stat-lbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+
+/* ── Main layout ── */
+.main{max-width:1280px;margin:0 auto;padding:28px 32px;display:grid;grid-template-columns:400px 1fr;gap:24px;align-items:start}
+@media(max-width:900px){.main{grid-template-columns:1fr}}
+
+/* ── Cards ── */
+.card{background:var(--s1);border:1px solid #1e2d4a;border-radius:16px;overflow:hidden}
+.card-top{padding:16px 20px;border-bottom:1px solid #1a2235;display:flex;align-items:center;justify-content:space-between}
+.card-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--txt3)}
+.card-body{padding:20px}
+
+/* ── Colorful section headers ── */
+.sec-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.sec-dot{width:10px;height:10px;border-radius:50%}
+.sec-title{font-size:13px;font-weight:600;color:var(--txt)}
+
+/* ── Conf slider ── */
+.conf-wrap{background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.conf-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.conf-top label{font-size:12px;color:var(--txt2)}
+.conf-display{font-size:18px;font-weight:700;color:var(--cyan)}
+input[type=range]{width:100%;-webkit-appearance:none;height:5px;background:var(--b1);border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--cyan));cursor:pointer;border:2px solid var(--bg)}
+.range-labels{display:flex;justify-content:space-between;margin-top:4px}
+.range-labels span{font-size:10px;color:var(--txt3)}
+
+/* ── Upload ── */
+.upload-zone{border:1.5px dashed #1e3a5f;border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px;background:var(--s2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(59,130,246,0.05)}
+.upload-zone input{display:none}
+.upload-icon-ring{width:52px;height:52px;margin:0 auto 12px;border-radius:50%;border:2px solid #1e3a5f;display:flex;align-items:center;justify-content:center;background:var(--s3)}
+.upload-icon-ring svg{width:22px;height:22px;fill:none;stroke:var(--blue);stroke-width:1.8}
+.upload-h{font-size:14px;font-weight:500;color:var(--txt);margin-bottom:3px}
+.upload-s{font-size:11px;color:var(--txt3)}
+#preview-img{width:100%;max-height:160px;object-fit:contain;border-radius:8px;display:none;margin-top:12px;border:1px solid var(--b1)}
+
+/* ── Analyze button ── */
+.analyze-btn{width:100%;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--blue),var(--indigo));color:#fff;letter-spacing:.02em}
+.analyze-btn:hover{filter:brightness(1.1)}
+.analyze-btn:active{transform:scale(.99)}
+.analyze-btn:disabled{opacity:.35;cursor:not-allowed;filter:none}
+.analyze-btn svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.2}
+
+/* ── Divider ── */
+.div{height:1px;background:var(--b1);margin:16px 0}
+
+/* ── Quick links ── */
+.qlinks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.qlink{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border-radius:10px;border:1px solid var(--b1);background:var(--s2);text-decoration:none;transition:all .2s;cursor:pointer}
+.qlink:hover{border-color:var(--indigo);background:rgba(99,102,241,0.08)}
+.qlink-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.qlink-icon svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2}
+.qlink span{font-size:11px;color:var(--txt2);font-weight:500}
+
+/* ── Results right panel ── */
+.empty-panel{padding:60px 20px;text-align:center}
+.empty-ring{width:64px;height:64px;margin:0 auto 16px;border-radius:50%;border:2px solid var(--b1);display:flex;align-items:center;justify-content:center;background:var(--s2)}
+.empty-ring svg{width:28px;height:28px;fill:none;stroke:var(--txt3);stroke-width:1.5}
+
+/* ── Loading ── */
+.loading-panel{padding:60px 20px;text-align:center;display:none}
+.spinner-ring{width:44px;height:44px;border:3px solid var(--b1);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Stat grid ── */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat-box{border-radius:12px;padding:14px 12px;text-align:center;border:1px solid}
+.stat-box-blue{background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.2)}
+.stat-box-amber{background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.2)}
+.stat-box-red{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2)}
+.stat-box-green{background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.2)}
+.stat-num{font-size:28px;font-weight:800;line-height:1}
+.stat-lbl{font-size:10px;font-weight:500;margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Alert ── */
+.alert{border-radius:10px;padding:11px 15px;margin-bottom:14px;font-size:13px;font-weight:500;display:none;align-items:center;gap:9px}
+.alert svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;flex-shrink:0}
+.alert-danger{background:rgba(239,68,68,0.1);color:#ec2929;border:1px solid rgba(239,68,68,0.3)}
+.alert-success{background:rgba(34,197,94,0.1);color:#065121;border:1px solid rgba(34,197,94,0.25)}
+
+/* ── Detection cards ── */
+.det-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.det-item{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:border-color .2s}
+.det-item:hover{border-color:var(--b2)}
+.det-class-badge{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.det-mid{flex:1;min-width:0}
+.det-chips{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.chip{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:.03em}
+.det-bar-wrap{background:var(--s3);border-radius:20px;height:9px;overflow:hidden;border:1px solid var(--b1);margin-bottom:4px}
+.det-bar{height:100%;border-radius:20px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.det-ticks{display:flex;justify-content:space-between}
+.det-ticks span{font-size:9px;color:var(--txt3)}
+.det-score-block{text-align:right;min-width:64px}
+.det-score-num{font-size:26px;font-weight:800;line-height:1}
+.det-score-denom{font-size:11px;color:var(--txt3);font-weight:400}
+.det-action{font-size:10px;color:var(--txt3);margin-top:3px}
+
+/* ── Latency bar ── */
+.latency-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:8px 12px;background:var(--s2);border-radius:8px;border:1px solid var(--b1)}
+.latency-row span{font-size:11px;color:var(--txt3)}
+.latency-row strong{font-size:11px;color:var(--cyan);font-weight:600}
+
+/* ── Scale legend ── */
+.legend-strip{display:flex;gap:0;border-radius:8px;overflow:hidden;height:6px;margin-bottom:8px}
+.legend-strip div{flex:1}
+.legend-labels{display:flex;justify-content:space-between}
+.legend-labels span{font-size:10px;color:var(--txt3)}
+
+/* ── Annotated image ── */
+.img-result-wrap{margin-top:20px}
+.img-result-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.img-result-title{font-size:12px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.06em}
+#annotatedImg{width:100%;max-height:480px;object-fit:contain;border-radius:12px;border:1px solid var(--b1);display:block;background:var(--s2)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>AI-Based Road Sign Reflectivity Detection</h1>
+        <p>for Proactive Road Safety Maintenance</p>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="status-pill status-online"><div class="pulse"></div>System online</div>
+      <div class="status-pill status-model">YOLO11m</div>
+    </div>
+    <div class="nav-links">
+      <a class="nav-link" href="http://localhost:8000/docs" target="_blank">API</a>
+      <a class="nav-link" href="http://localhost:9090" target="_blank">Prometheus</a>
+      <a class="nav-link" href="http://localhost:3000" target="_blank">Grafana</a>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--blue)">3</div>
+      <div class="hero-stat-lbl">Classes</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--violet)">YOLO11m</div>
+      <div class="hero-stat-lbl">Model</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--cyan)">0–10</div>
+      <div class="hero-stat-lbl">Score range</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--green)">RTX 3050</div>
+      <div class="hero-stat-lbl">GPU</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--amber)">Fine-tuned</div>
+      <div class="hero-stat-lbl">Training</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Left: input panel -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="card">
+      <div class="card-top">
+        <span class="card-label">Image Input</span>
+        <span style="font-size:11px;color:var(--txt3)">Drag & drop supported</span>
+      </div>
+      <div class="card-body">
+
+        <div class="conf-wrap">
+          <div class="conf-top">
+            <label>Confidence threshold</label>
+            <span class="conf-display" id="confVal">0.35</span>
+          </div>
+          <input type="range" min="10" max="80" value="35" step="1" id="confSlider"
+                 oninput="document.getElementById('confVal').textContent=(this.value/100).toFixed(2)">
+          <div class="range-labels"><span>0.10</span><span>0.45</span><span>0.80</span></div>
+        </div>
+
+        <div class="upload-zone" id="dropZone"
+             onclick="document.getElementById('fileInput').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="onDrop(event)">
+          <input type="file" id="fileInput" accept="image/*" onchange="onFile(event)">
+          <div class="upload-icon-ring">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <p class="upload-h">Drop image or click to browse</p>
+          <p class="upload-s">JPG · PNG · road sign photos</p>
+          <img id="preview-img"/>
+        </div>
+
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Run Detection
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-label">Quick Access</span>
+      </div>
+      <div class="card-body">
+        <div class="qlinks">
+          <a class="qlink" href="http://localhost:8000/docs" target="_blank">
+            <div class="qlink-icon" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <span>Swagger API</span>
+          </a>
+          <a class="qlink" href="http://localhost:9090" target="_blank">
+            <div class="qlink-icon" style="background:linear-gradient(135deg,#f97316,#ef4444)">
+              <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <span>Prometheus</span>
+          </a>
+          <a class="qlink" href="http://localhost:3000" target="_blank">
+            <div class="qlink-icon" style="background:linear-gradient(135deg,#f59e0b,#eab308)">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <span>Grafana</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Score guide -->
+    <div class="card">
+      <div class="card-top"><span class="card-label">Reflectivity Scale</span></div>
+      <div class="card-body">
+        <div class="legend-strip">
+          <div style="background:#ef4444"></div>
+          <div style="background:#f97316"></div>
+          <div style="background:#f59e0b"></div>
+          <div style="background:#84cc16"></div>
+          <div style="background:#22c55e"></div>
+        </div>
+        <div class="legend-labels" style="margin-bottom:14px">
+          <span>0</span><span>3.5</span><span>6.5</span><span>10</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;flex-shrink:0"></div>
+            <div><div style="font-size:12px;font-weight:600;color:#f22323">Bad Sign &nbsp;· &nbsp;0 – 3.5</div><div style="font-size:11px;color:var(--txt3)">Urgent replacement required</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#aa6e07;flex-shrink:0"></div>
+            <div><div style="font-size:12px;font-weight:600;color:#957217">Moderate &nbsp;· &nbsp;3.6 – 6.5</div><div style="font-size:11px;color:var(--txt3)">Schedule maintenance</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#0ba443;flex-shrink:0"></div>
+            <div><div style="font-size:12px;font-weight:600;color:#4ade80">Good Sign &nbsp;· &nbsp;6.6 – 10</div><div style="font-size:11px;color:var(--txt3)">No action needed</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: results panel -->
+  <div class="card" style="min-height:500px">
+    <div class="card-top">
+      <span class="card-label">Detection Results</span>
+      <span id="resultBadge" style="display:none;font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2);font-weight:600"></span>
+    </div>
+    <div class="card-body">
+
+      <div class="loading-panel" id="loadingState">
+        <div class="spinner-ring"></div>
+        <p style="font-size:14px;color:var(--txt2);font-weight:500">Running YOLO11m inference</p>
+        <p style="font-size:12px;color:var(--txt3);margin-top:5px">Detecting signs and scoring reflectivity...</p>
+      </div>
+
+      <div id="emptyState" class="empty-panel">
+        <div class="empty-ring">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <p style="font-size:15px;color:var(--txt2);font-weight:500;margin-bottom:6px">Awaiting image input</p>
+        <p style="font-size:12px;color:var(--txt3)">Upload a road sign photo and click Run Detection</p>
+      </div>
+
+      <div id="resultsContent" style="display:none">
+
+        <div class="latency-row">
+          <span>Last inference</span>
+          <strong id="latencyTxt">—</strong>
+        </div>
+
+        <div class="alert alert-danger" id="alertDanger">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Bad sign detected — immediate maintenance action required
+        </div>
+        <div class="alert alert-success" id="alertOk">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          All detected signs are in acceptable condition
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-box stat-box-blue">
+            <div class="stat-num" style="color:#60a5fa" id="sTotalSigns">0</div>
+            <div class="stat-lbl" style="color:#3b82f6">Signs</div>
+          </div>
+          <div class="stat-box stat-box-amber">
+            <div class="stat-num" style="color:#997415" id="sAvgScore">—</div>
+            <div class="stat-lbl" style="color:#946008">Avg score</div>
+          </div>
+          <div class="stat-box stat-box-red">
+            <div class="stat-num" style="color:#914141" id="sBad">0</div>
+            <div class="stat-lbl" style="color:#872525">Bad</div>
+          </div>
+          <div class="stat-box stat-box-green">
+            <div class="stat-num" style="color:#339557" id="sGood">0</div>
+            <div class="stat-lbl" style="color:#147136">Good</div>
+          </div>
+        </div>
+
+        <div class="det-list" id="detCards"></div>
+
+        <div id="imgResultWrap" style="display:none" class="img-result-wrap">
+          <div class="img-result-header">
+            <span class="img-result-title">Annotated Output</span>
+            <span id="imgMeta" style="font-size:11px;color:var(--txt3)"></span>
+          </div>
+          <img id="annotatedImg"/>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:8000';
+const PALETTE={
+  bad_sign :{c:'#ef4444',badge:'background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)',chip:'background:rgba(239,68,68,0.1);color:#f87171',bar:'#ef4444',action:'Urgent — replace immediately'},
+  good_sign:{c:'#22c55e',badge:'background:rgba(34,197,94,0.15);color:#86efac;border:1px solid rgba(34,197,94,0.3)',chip:'background:rgba(34,197,94,0.1);color:#4ade80',bar:'#22c55e',action:'No action required'},
+  moderate :{c:'#f59e0b',badge:'background:rgba(245,158,11,0.15);color:#fde68a;border:1px solid rgba(245,158,11,0.3)',chip:'background:rgba(245,158,11,0.1);color:#fbbf24',bar:'#f59e0b',action:'Schedule maintenance'}
+};
+const LB={bad_sign:'Bad Sign',good_sign:'Good Sign',moderate:'Moderate'};
+
+function onDrop(e){
+  e.preventDefault();document.getElementById('dropZone').classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(f&&f.type.startsWith('image/')){
+    const dt=new DataTransfer();dt.items.add(f);
+    document.getElementById('fileInput').files=dt.files;
+    showPreview(f);
+  }
+}
+function onFile(e){const f=e.target.files[0];if(f)showPreview(f);}
+function showPreview(f){
+  const img=document.getElementById('preview-img');
+  img.src=URL.createObjectURL(f);img.style.display='block';
+}
+
+async function analyze(){
+  const fi=document.getElementById('fileInput');
+  if(!fi.files[0]){alert('Please upload a road sign image first.');return;}
+  ['emptyState','resultsContent'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('loadingState').style.display='block';
+  document.getElementById('imgResultWrap').style.display='none';
+  document.getElementById('resultBadge').style.display='none';
+  document.getElementById('analyzeBtn').disabled=true;
+  const conf=document.getElementById('confSlider').value/100;
+  const fd=new FormData();fd.append('file',fi.files[0]);
+  try{
+    const r=await fetch(`${API}/analyze?conf=${conf}`,{method:'POST',body:fd});
+    const d=await r.json();render(d);
+  }catch(err){
+    alert('Cannot reach FastAPI at localhost:8000\n\nStart it with:\nconda activate sperm_gpu\nuvicorn app.main:app --host 0.0.0.0 --port 8000 --reload');
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('emptyState').style.display='block';
+  }finally{document.getElementById('analyzeBtn').disabled=false;}
+}
+
+function render(data){
+  document.getElementById('loadingState').style.display='none';
+  document.getElementById('resultsContent').style.display='block';
+  const s=data.summary||{};
+  const rb=document.getElementById('resultBadge');
+  rb.textContent=`${s.total_signs} sign${s.total_signs!==1?'s':''} found`;
+  rb.style.display='inline-block';
+  document.getElementById('latencyTxt').textContent=`${data.latency_seconds}s  ·  ${new Date().toLocaleTimeString()}`;
+  document.getElementById('sTotalSigns').textContent=s.total_signs??0;
+  document.getElementById('sAvgScore').textContent=s.avg_score!=null?`${s.avg_score}/10`:'—';
+  document.getElementById('sBad').textContent=s.bad_signs_count??0;
+  document.getElementById('sGood').textContent=s.good_signs_count??0;
+  const ad=document.getElementById('alertDanger'),ao=document.getElementById('alertOk');
+  ad.style.display=s.alert?'flex':'none';ao.style.display=s.alert?'none':'flex';
+  const dc=document.getElementById('detCards');dc.innerHTML='';
+  (data.detections||[]).forEach(d=>{
+    const p=PALETTE[d.class]||PALETTE.moderate;
+    const pct=Math.min(100,(d.reflectivity_score/10)*100);
+    dc.innerHTML+=`
+    <div class="det-item">
+      <div class="det-class-badge" style="${p.badge}">${LB[d.class]||d.class}</div>
+      <div class="det-mid">
+        <div class="det-chips">
+          <span class="chip" style="${p.chip}">${d.reflectivity_label}</span>
+          <span class="chip" style="background:rgba(99,102,241,0.1);color:#a5b4fc">conf: ${d.confidence}</span>
+          <span class="chip" style="background:rgba(148,163,184,0.08);color:#c5ccd9">${p.action}</span>
+        </div>
+        <div class="det-bar-wrap">
+          <div class="det-bar" style="width:${pct}%;background:${p.bar}"></div>
+        </div>
+        <div class="det-ticks"><span>0</span><span>3.5</span><span>6.5</span><span>10</span></div>
+      </div>
+      <div class="det-score-block">
+        <div class="det-score-num" style="color:${p.c}">${d.reflectivity_score}</div>
+        <div class="det-score-denom">/10</div>
+      </div>
+    </div>`;
+  });
+  if(data.annotated_image){
+    document.getElementById('annotatedImg').src='data:image/png;base64,'+data.annotated_image;
+    document.getElementById('imgMeta').textContent=`${data.filename}`;
+    document.getElementById('imgResultWrap').style.display='block';
+  }
+}
+</script>
+</body>
+</html>
